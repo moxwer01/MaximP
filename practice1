@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# функция для вывода списка пользователей и их домашних директорий
+list_users() {
+    cut -d: -f1,6 /etc/passwd | sort
+}
+
+# функция для вывода списка процессов с их идентификаторами
+list_processes() {
+    ps -e -o pid,comm --sort=pid
+}
+
+# функция для вывода справки
+show_help() {
+    echo "использование: $0 [OPTIONS]"
+    echo "-u, --users вывести перечень пользователей и их домашних директорий"
+    echo "-p, --processes вывести перечень запущенных процессов"
+    echo "-h, --help показать справку"
+    echo "-l PATH, --log PATH выводить в файл по указанному пути"
+    echo "-e PATH, --errors PATH выводить ошибки в файл по указанному пути"
+}
+
+# обработчик ошибок
+handle_error() {
+    echo "ошибка: $1" >&2
+    exit 1
+}
+
+# функция для обработки аргументов командной строки
+process_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -u|--users)
+                list_users
+                ;;
+            -p|--processes)
+                list_processes
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -l)
+                shift
+                if [[ -z $1 ]]; then
+                    handle_error "не указан путь для лог-файла"
+                fi
+                if [[ ! -d $(dirname "$1") ]]; then
+                    handle_error "не существует директория для лог-файла"
+                fi
+                exec > "$1"
+                ;;
+            --log)
+                shift
+                if [[ -z $1 ]]; then
+                    handle_error "не указан путь для лог-файла"
+                fi
+                if [[ ! -d $(dirname "$1") ]]; then
+                    handle_error "не существует директория для лог-файла"
+                fi
+                exec > "$1"
+                ;;
+            -e)
+                shift
+                if [[ -z $1 ]]; then
+                    handle_error "не указан путь для файла ошибок"
+                fi
+                if [[ ! -d $(dirname "$1") ]]; then
+                    handle_error "не существует директория для файла ошибок"
+                fi
+                exec 2> "$1"
+                ;;
+            --errors)
+                shift
+                if [[ -z $1 ]]; then
+                    handle_error "не указан путь для файла ошибок"
+                fi
+                if [[ ! -d $(dirname "$1") ]]; then
+                    handle_error "не существует директория для файла ошибок"
+                fi
+                exec 2> "$1"
+                ;;
+            *)
+                handle_error "неизвестный параметр $1"
+                ;;
+        esac
+        shift
+    done
+}
+
+# основная логика программы
+process_args "$@"
